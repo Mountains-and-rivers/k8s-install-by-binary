@@ -1056,7 +1056,7 @@ systemctl daemon-reload
 systemctl start kubelet
 systemctl enable kubelet
 systemctl start kube-proxy
-systemctl enable kube-proxy
+systemctl status kube-proxy
 ```
 
  （10） 在 Master 上批准新 Node kubelet 证书申请
