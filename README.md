@@ -10,7 +10,7 @@
 cat /etc/redhat-release 
 CentOS Linux release 8.3.2011
 ```
-
+安装包直通车:链接：https://pan.baidu.com/s/1iRi78C6ClnP1930c_bOReQ 提取码：dy4s  
 # 二，安装前操作
 
 ```
