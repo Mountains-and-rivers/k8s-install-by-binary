@@ -1024,13 +1024,11 @@ kubectl apply -f apiserver-to-kubelet-rbac.yaml
 ```
 # node01
 scp -r /opt/kubernetes root@192.168.31.209:/opt/
-scp -r /usr/bin/kubectl root@192.168.31.209:/usr/bin/kubectl
 scp -r /usr/lib/systemd/system/{kubelet,kube-proxy}.service root@192.168.31.209:/usr/lib/systemd/system
 scp -r /opt/cni/ root@192.168.31.209:/opt/
 scp /opt/kubernetes/ssl/ca.pem root@192.168.31.209:/opt/kubernetes/ssl
 # node02
 scp -r /opt/kubernetes root@192.168.31.214:/opt/
-scp -r /usr/bin/kubectl root@192.168.31.214:/usr/bin/kubectl
 scp -r /usr/lib/systemd/system/{kubelet,kube-proxy}.service root@192.168.31.214:/usr/lib/systemd/system
 scp -r /opt/cni/ root@192.168.31.214:/opt/
 scp /opt/kubernetes/ssl/ca.pem root@192.168.31.214:/opt/kubernetes/ssl
