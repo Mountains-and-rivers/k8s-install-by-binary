@@ -351,9 +351,15 @@ EOF
 ```
 
 (5) 启动并设置开机启动
+
+```
 systemctl daemon-reload
 systemctl start docker
 systemctl enable docker
+systemctl status docker
+```
+
+
 
 # 五，部署master组件
 
@@ -687,5 +693,411 @@ systemctl enable kube-scheduler
 systemctl status kube-scheduler
 ```
 
-# 六， 部署 Worker  Node
+# 六， 部署 Worker  Node[master]
+
+#### 部署 kubelet
+
+（1） 创建工作目录并拷贝二进制文件
+
+```
+mkdir -p /opt/kubernetes/{bin,cfg,ssl,logs}
+cd kubernetes/server/bin
+cp -rf kubelet kube-proxy /opt/kubernetes/bin # 本地拷贝
+```
+
+（2） 创建工作目录并拷贝二进制文件
+
+```
+cat > /opt/kubernetes/cfg/kubelet.conf << EOF
+KUBELET_OPTS="--logtostderr=false \\
+--v=2 \\
+--log-dir=/opt/kubernetes/logs \\
+--hostname-override=master \\
+--network-plugin=cni \\
+--kubeconfig=/opt/kubernetes/cfg/kubelet.kubeconfig \\
+--bootstrap-kubeconfig=/opt/kubernetes/cfg/bootstrap.kubeconfig \\
+--config=/opt/kubernetes/cfg/kubelet-config.yml \\
+--cert-dir=/opt/kubernetes/ssl \\
+--pod-infra-container-image=lizhenliang/pause-amd64:3.0"
+EOF
+```
+
+```
+–hostname-override：显示名称，集群中唯一
+–network-plugin：启用 CNI
+–kubeconfig：空路径，会自动生成，后面用于连接 apiserver
+–bootstrap-kubeconfig：首次启动向 apiserver 申请证书
+–config：配置参数文件
+–cert-dir：kubelet 证书生成目录
+–pod-infra-container-image：管理 Pod 网络容器的镜像
+```
+
+（3）  配置参数文件
+
+```
+cat > /opt/kubernetes/cfg/kubelet-config.yml << EOF
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+address: 0.0.0.0
+port: 10250
+readOnlyPort: 10255
+cgroupDriver: cgroupfs
+clusterDNS:
+- 10.0.0.2
+clusterDomain: cluster.local
+failSwapOn: false
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    cacheTTL: 2m0s
+    enabled: true
+  x509:
+    clientCAFile: /opt/kubernetes/ssl/ca.pem
+authorization:
+  mode: Webhook
+  webhook:
+    cacheAuthorizedTTL: 5m0s
+    cacheUnauthorizedTTL: 30s
+evictionHard:
+imagefs.available: 15%
+memory.available: 100Mi
+nodefs.available: 10%
+nodefs.inodesFree: 5%
+maxOpenFiles: 1000000
+maxPods: 110
+EOF
+```
+
+（4） 生成 bootstrap.kubeconfig 文件
+
+```
+KUBE_APISERVER="https://192.168.31.240:6443" #apiserver IP:PORT
+TOKEN="378c331fdff5dfa16d0b8b475f831b24" #与 token.csv 里保持一致
+# 生成 kubelet bootstrap kubeconfig 配置文件
+kubectl config set-cluster kubernetes \
+--certificate-authority=/opt/kubernetes/ssl/ca.pem \
+--embed-certs=true \
+--server=${KUBE_APISERVER} \
+--kubeconfig=bootstrap.kubeconfig
+kubectl config set-credentials "kubelet-bootstrap" \
+--token=${TOKEN} \
+--kubeconfig=bootstrap.kubeconfig
+kubectl config set-context default \
+--cluster=kubernetes \
+--user="kubelet-bootstrap" \
+--kubeconfig=bootstrap.kubeconfig
+kubectl config use-context default --kubeconfig=bootstrap.kubeconfig
+```
+
+```
+拷贝到配置文件路径：
+cp -rf bootstrap.kubeconfig /opt/kubernetes/cfg
+```
+
+（5）  systemd 管理 kubelet
+
+```
+cat > /usr/lib/systemd/system/kubelet.service << EOF
+[Unit]
+Description=Kubernetes Kubelet
+After=docker.service
+[Service]
+EnvironmentFile=/opt/kubernetes/cfg/kubelet.conf
+ExecStart=/opt/kubernetes/bin/kubelet \$KUBELET_OPTS
+Restart=on-failure
+LimitNOFILE=65536
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+（6）   启动并设置开机启动
+
+```
+systemctl daemon-reload
+systemctl start kubelet
+systemctl enable kubelet
+systemctl status kubelet
+```
+
+（7）批准 kubelet 证书申请并加入集群
+
+```
+# 查看 kubelet  证书请求
+kubectl get  csr
+NAME                                                   AGE   SIGNERNAME                                    REQUESTOR           CONDITION
+node-csr-alnfvT1q97XCiVC6TILz8frakVi_av_f9yCSwWk5xKo   50s   kubernetes.io/kube-apiserver-client-kubelet   kubelet-bootstrap   Pending
+# 批准申请
+kubectl certificate approve node-csr-alnfvT1q97XCiVC6TILz8frakVi_av_f9yCSwWk5xKo
+# 查看节点
+kubectl get node
+#注：由于网络插件还没有部署，节点会没有准备就绪 NotReady
+```
+
+####  部署 kube-proxy
+
+（1）创建配置文件
+
+```
+cat > /opt/kubernetes/cfg/kube-proxy.conf << EOF
+KUBE_PROXY_OPTS="--logtostderr=false \\
+--v=2 \\
+--log-dir=/opt/kubernetes/logs \\
+--config=/opt/kubernetes/cfg/kube-proxy-config.yml"
+EOF
+```
+
+（2）配置参数文件
+
+```
+cat > /opt/kubernetes/cfg/kube-proxy-config.yml << EOF
+kind: KubeProxyConfiguration
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+bindAddress: 0.0.0.0
+metricsBindAddress: 0.0.0.0:10249
+clientConnection:
+  kubeconfig: /opt/kubernetes/cfg/kube-proxy.kubeconfig
+hostnameOverride: master
+clusterCIDR: 10.0.0.0/24
+EOF
+```
+
+（3）生成 kube-proxy.kubeconfig 文件
+
+生成 kube-proxy 证书
+
+```
+# 切换工作目录
+cd ~/TLS/k8s
+# 创建证书请求文件
+cat > kube-proxy-csr.json<< EOF
+{
+    "CN":"system:kube-proxy",
+    "hosts":[],
+    "key":{
+        "algo":"rsa",
+        "size":2048
+    },
+    "names":[
+        {
+            "C":"CN",
+            "L":"ShenZhen",
+            "ST":"ShenZhen",
+            "O":"k8s",
+            "OU":"System"
+        }
+    ]
+}
+EOF
+# 生成证书
+cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=kubernetes kube-proxy-csr.json | cfssljson -bare kube-proxy
+ls kube-proxy*pem
+kube-proxy-key.pem kube-proxy.pem
+```
+
+生成 kubeconfig 文件：
+
+```
+KUBE_APISERVER="https://192.168.31.240:6443"
+kubectl config set-cluster kubernetes \
+--certificate-authority=/opt/kubernetes/ssl/ca.pem \
+--embed-certs=true \
+--server=${KUBE_APISERVER} \
+--kubeconfig=kube-proxy.kubeconfig
+kubectl config set-credentials kube-proxy \
+--client-certificate=./kube-proxy.pem \
+--client-key=./kube-proxy-key.pem \
+--embed-certs=true \
+--kubeconfig=kube-proxy.kubeconfig
+kubectl config set-context default \
+--cluster=kubernetes \
+--user=kube-proxy \
+--kubeconfig=kube-proxy.kubeconfig
+kubectl config use-context default --kubeconfig=kube-proxy.kubeconfig
+```
+
+```
+拷贝到配置文件指定路径：
+cp -rf kube-proxy.kubeconfig /opt/kubernetes/cfg/
+```
+
+（4） systemd 管理 kube-proxy
+
+```
+cat > /usr/lib/systemd/system/kube-proxy.service << EOF
+[Unit]
+Description=Kubernetes Proxy
+After=network.target
+[Service]
+EnvironmentFile=/opt/kubernetes/cfg/kube-proxy.conf
+ExecStart=/opt/kubernetes/bin/kube-proxy \$KUBE_PROXY_OPTS
+Restart=on-failure
+LimitNOFILE=65536
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+（5） 启动并设置开机启动
+
+```
+systemctl daemon-reload
+systemctl start kube-proxy
+systemctl enable kube-proxy
+systemctl status kube-proxy
+```
+
+（6）  部署 CNI 网络
+
+```
+先准备好 CNI 二进制文件：
+下载地址：
+https://github.com/containernetworking/plugins/releases/download/v0.8.6/cni-
+plugins-linux-amd64-v0.8.6.tgz
+解压二进制包并移动到默认工作目录
+```
+
+```
+mkdir -p /opt/cni/bin
+tar zxvf cni-plugins-linux-amd64-v0.8.6.tgz -C /opt/cni/bin
+```
+
+```
+wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+sed -i -r "s#quay.io/coreos/flannel:.*-rc2#lizhenliang/flannel:v0.12.0-amd64#g" kube-flannel.yml
+```
+
+```
+默认镜像地址无法访问，修改为 docker hub 镜像仓库。
+kubectl apply -f kube-flannel.yml
+kubectl get pods -n kube-system
+kubectl get node
+部署好网络插件，Node 准备就绪。
+```
+
+（6） 授权 apiserver 访问 kubelet
+
+```
+cat > apiserver-to-kubelet-rbac.yaml<< EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: system:kube-apiserver-to-kubelet
+rules:
+  - apiGroups:
+       - ""
+    resources:
+      - nodes/proxy
+      - nodes/stats
+      - nodes/log
+      - nodes/spec
+      - nodes/metrics
+      - pods/log
+    verbs:
+      - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:kube-apiserver
+  namespace: ""
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-apiserver-to-kubelet
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: kubernetes
+EOF
+
+kubectl apply -f apiserver-to-kubelet-rbac.yaml
+```
+
+（7） 拷贝已部署好的 Node 相关文件到新节点
+
+```
+# node01
+scp -r /opt/kubernetes root@192.168.31.209:/opt/
+scp -r /usr/bin/kubectl root@192.168.31.209:/usr/bin/kubectl
+scp -r /usr/lib/systemd/system/{kubelet,kube-proxy}.service root@192.168.31.209:/usr/lib/systemd/system
+scp -r /opt/cni/ root@192.168.31.209:/opt/
+scp /opt/kubernetes/ssl/ca.pem root@192.168.31.209:/opt/kubernetes/ssl
+# node02
+scp -r /opt/kubernetes root@192.168.31.214:/opt/
+scp -r /usr/bin/kubectl root@192.168.31.214:/usr/bin/kubectl
+scp -r /usr/lib/systemd/system/{kubelet,kube-proxy}.service root@192.168.31.214:/usr/lib/systemd/system
+scp -r /opt/cni/ root@192.168.31.214:/opt/
+scp /opt/kubernetes/ssl/ca.pem root@192.168.31.214:/opt/kubernetes/ssl
+```
+
+（8） 删除 kubelet 证书和 kubeconfig 文件
+
+```
+rm -rf /opt/kubernetes/cfg/kubelet.kubeconfig
+rm -rf /opt/kubernetes/ssl/kubelet*
+# 修改主机名
+vi /opt/kubernetes/cfg/kubelet.conf
+--hostname-override=node01 #修改为对应的主机名
+vi /opt/kubernetes/cfg/kube-proxy-config.yml
+hostnameOverride:node01 #修改为对应的主机名
+
+```
+
+（9） 启动并设置开机启动
+
+```
+systemctl daemon-reload
+systemctl start kubelet
+systemctl enable kubelet
+systemctl start kube-proxy
+systemctl enable kube-proxy
+```
+
+ （10） 在 Master 上批准新 Node kubelet 证书申请
+
+```
+kubectl get csr
+NAME                                                   AGE     SIGNERNAME                                    REQUESTOR           CONDITION
+node-csr-8wh7AEAj8bGhaeI_K_pNRWCFVTM65eRrXtbEgCxbenc   4m33s   kubernetes.io/kube-apiserver-client-kubelet   kubelet-bootstrap   Pending
+node-csr-alnfvT1q97XCiVC6TILz8frakVi_av_f9yCSwWk5xKo   42m     kubernetes.io/kube-apiserver-client-kubelet   kubelet-bootstrap   Approved,Issued
+node-csr-s7PYu_ZCaDocKvq4mWLaawvswObcEQPo4ON6KhkOrwo   6m14s   kubernetes.io/kube-apiserver-client-kubelet   kubelet-bootstrap   Pending
+# node01 && node02
+kubectl certificate approve node-csr-8wh7AEAj8bGhaeI_K_pNRWCFVTM65eRrXtbEgCxbenc
+kubectl certificate approve node-csr-s7PYu_ZCaDocKvq4mWLaawvswObcEQPo4ON6KhkOrwo
+
+```
+
+ （11） 查看 Node 状态
+
+```
+kubectl get node
+
+NAME     STATUS   ROLES    AGE   VERSION
+node01   Ready    <none>   21s   v1.18.3
+node02   Ready    <none>   23s   v1.18.3
+```
+
+(12） 验证
+
+```
+kubectl create deployment nginx --image=nginx
+kubectl expose deployment nginx --port=80 --type=NodePort
+kubectl get pod,svc
+kubectl get pod -owide -n kube-system
+kubectl get pod,svc
+NAME                        READY   STATUS              RESTARTS   AGE
+pod/nginx-f89759699-2xf2v   1/1     Running   0          19m
+
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)        AGE
+service/kubernetes   ClusterIP   10.0.0.1     <none>        443/TCP        8h
+service/nginx        NodePort    10.0.0.196   <none>        80:31775/TCP   18
+```
+
+
 
