@@ -1086,7 +1086,6 @@ node02   Ready    <none>   23s   v1.18.3
 ```
 kubectl create deployment nginx --image=nginx
 kubectl expose deployment nginx --port=80 --type=NodePort
-kubectl get pod,svc
 kubectl get pod -owide -n kube-system
 kubectl get pod,svc
 NAME                        READY   STATUS              RESTARTS   AGE
