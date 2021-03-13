@@ -150,8 +150,7 @@ server-key.pem server.pem
 
 ```
  从 Github 下载二进制文件
-下载地址：https://github.com/etcd-io/etcd/releases/download/v3.4.9/etcd-v3.4.9-
-linux-amd64.tar.gz
+下载地址：https://github.com/etcd-io/etcd/releases/download/v3.4.9/etcd-v3.4.9-linux-amd64.tar.gz
 ```
 
 (2) 部署Etcd集群 [当前操作在master节点]
@@ -301,8 +300,7 @@ https://192.168.31.214:2379 is healthy: successfully committed proposal: took = 
 (1) 下载安装包
 
 ```
-https://download.docker.com/linux/static/stable/x86_64/docker-
-19.03.9.tgz
+https://download.docker.com/linux/static/stable/x86_64/docker-19.03.9.tgz
 ```
 
 (2) 解压二进制包
@@ -953,8 +951,7 @@ systemctl status kube-proxy
 ```
 先准备好 CNI 二进制文件：
 下载地址：
-https://github.com/containernetworking/plugins/releases/download/v0.8.6/cni-
-plugins-linux-amd64-v0.8.6.tgz
+https://github.com/containernetworking/plugins/releases/download/v0.8.6/cni-plugins-linux-amd64-v0.8.6.tgz
 解压二进制包并移动到默认工作目录
 ```
 
