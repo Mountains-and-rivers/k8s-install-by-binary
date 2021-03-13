@@ -14,18 +14,6 @@ CentOS Linux release 8.3.2011
 # 二，安装前操作
 
 ```
-# 关闭防火墙
-systemctl stop firewalld
-systemctl disable firewalld
-# 关闭selinux
-setenforce 0  # 临时
-sed -i 's/enforcing/disabled/' /etc/selinux/config  # 永久
-# 关闭交换分区
-# 根据规划设置主机名
-hostnamectl set-hostname <hostname>
-swapoff -a  # 临时
-sed -ri 's/.*swap.*/#&/' /etc/fstab    # 永久
-
 # 修改主机名
 hostnamectl set-hostname <hostname>
 cat >> /etc/hosts << EOF
@@ -33,6 +21,17 @@ cat >> /etc/hosts << EOF
 192.168.31.209 node01
 192.168.31.214 node02
 EOF
+# 上面结束重启机器
+
+# 关闭防火墙
+systemctl stop firewalld
+systemctl disable firewalld
+# 关闭selinux
+setenforce 0  # 临时
+sed -i 's/enforcing/disabled/' /etc/selinux/config  # 永久
+# 关闭交换分区
+swapoff -a  # 临时
+sed -ri 's/.*swap.*/#&/' /etc/fstab    # 永久
 
 # 将桥接的IPv4流量传递到iptables的链
 cat > /etc/sysctl.d/k8s.conf << EOF
@@ -366,6 +365,7 @@ systemctl status docker
 （1）生成 kube-apiserver 证书
 
 ```
+cd ~/TLS/k8s
 cat > ca-config.json<< EOF
 {
     "signing":{
@@ -415,7 +415,6 @@ ca-key.pem ca.pem
 
 ```
 # 使用自签 CA 签发 kube-apiserver HTTPS 证书
-cd TLS/k8s
 cat > server-csr.json<< EOF
 {
     "CN":"kubernetes",
@@ -690,6 +689,20 @@ systemctl start kube-scheduler
 systemctl enable kube-scheduler
 systemctl status kube-scheduler
 ```
+
+（4） 查看集群状态
+
+```
+kubectl get cs
+NAME                 STATUS    MESSAGE             ERROR
+controller-manager   Healthy   ok                  
+scheduler            Healthy   ok                  
+etcd-0               Healthy   {"health":"true"}   
+etcd-2               Healthy   {"health":"true"}   
+etcd-1               Healthy   {"health":"true"} 
+```
+
+
 
 # 六， 部署 Worker  Node[master]
 
@@ -1072,10 +1085,11 @@ kubectl certificate approve node-csr-s7PYu_ZCaDocKvq4mWLaawvswObcEQPo4ON6KhkOrwo
 
 ```
 kubectl get node
+NAME     STATUS   ROLES    AGE     VERSION
+master   Ready    <none>   8m33s   v1.18.3
+node01   Ready    <none>   11s     v1.18.3
+node02   Ready    <none>   21s     v1.18.3
 
-NAME     STATUS   ROLES    AGE   VERSION
-node01   Ready    <none>   21s   v1.18.3
-node02   Ready    <none>   23s   v1.18.3
 ```
 
 (12） 验证
@@ -1089,8 +1103,8 @@ NAME                        READY   STATUS              RESTARTS   AGE
 pod/nginx-f89759699-2xf2v   1/1     Running   0          19m
 
 NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)        AGE
-service/kubernetes   ClusterIP   10.0.0.1     <none>        443/TCP        8h
-service/nginx        NodePort    10.0.0.196   <none>        80:31775/TCP   18
+service/kubernetes   ClusterIP   10.0.0.1     <none>        443/TCP        65m
+service/nginx        NodePort    10.0.0.50    <none>        80:31091/TCP   21s
 ```
 
 
