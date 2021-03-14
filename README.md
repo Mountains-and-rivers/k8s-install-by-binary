@@ -17,14 +17,13 @@ CentOS Linux release 8.3.2011
 # 二，安装前操作
 
 ```
-# 修改主机名
+# 修改主机名 重启机器
 hostnamectl set-hostname <hostname>
 cat >> /etc/hosts << EOF
 192.168.31.240 master
 192.168.31.209 node01
 192.168.31.214 node02
 EOF
-# 上面结束重启机器
 
 # 关闭防火墙
 systemctl stop firewalld
