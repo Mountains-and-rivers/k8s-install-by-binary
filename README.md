@@ -10,11 +10,9 @@
 cat /etc/redhat-release 
 CentOS Linux release 8.3.2011
 ``` 
-```
-软件包
+软件包:
 链接：https://pan.baidu.com/s/12x4fKEN5onswPfDvGFnoUw 
 提取码：lebb 
-```
 # 二，安装前操作
 
 ```
