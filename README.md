@@ -9,7 +9,7 @@
 ```
 cat /etc/redhat-release 
 CentOS Linux release 8.3.2011
-``` 
+```
 软件包:
 链接：https://pan.baidu.com/s/12x4fKEN5onswPfDvGFnoUw 
 提取码：lebb 
@@ -536,7 +536,7 @@ EOF
 cp -rf ~/TLS/k8s/ca*pem ~/TLS/k8s/server*pem /opt/kubernetes/ssl/
 ```
 
-（5） 启用 TLS Bootstrapping 机制
+（6） 启用 TLS Bootstrapping 机制
 
 ```
  TLS Bootstraping：Master apiserver 启用 TLS 认证后，Node 节点 kubelet 和 kube-
@@ -559,7 +559,7 @@ token 也可自行生成替换：
 head -c 16 /dev/urandom | od -An -t x | tr -d ' '
 ```
 
-（6） systemd 管理 apiserver
+（7） systemd 管理 apiserver
 
 ```
  cat > /usr/lib/systemd/system/kube-apiserver.service << EOF
@@ -575,7 +575,7 @@ WantedBy=multi-user.target
 EOF
 ```
 
-（6）启动 apiserver
+（8）启动 apiserver
 
 ```
 systemctl daemon-reload
@@ -584,7 +584,7 @@ systemctl enable kube-apiserver
 systemctl status kube-apiserver
 ```
 
-（7）授权 kubelet-bootstrap 用户允许请求证书
+（9）授权 kubelet-bootstrap 用户允许请求证书
 
 ```
  kubectl create clusterrolebinding kubelet-bootstrap \
@@ -718,7 +718,7 @@ cd kubernetes/server/bin
 cp -rf kubelet kube-proxy /opt/kubernetes/bin # 本地拷贝
 ```
 
-（2） 创建工作目录并拷贝二进制文件
+（2） 创建kubelet启动配置文件
 
 ```
 cat > /opt/kubernetes/cfg/kubelet.conf << EOF
@@ -988,7 +988,7 @@ kubectl get node
 部署好网络插件，Node 准备就绪。
 ```
 
-（6） 授权 apiserver 访问 kubelet
+（7） 授权 apiserver 访问 kubelet
 
 ```
 cat > apiserver-to-kubelet-rbac.yaml<< EOF
@@ -1031,7 +1031,7 @@ EOF
 kubectl apply -f apiserver-to-kubelet-rbac.yaml
 ```
 
-（7） 拷贝已部署好的 Node 相关文件到新节点
+（8） 拷贝已部署好的 Node 相关文件到新节点
 
 ```
 # node01
@@ -1046,7 +1046,7 @@ scp -r /opt/cni/ root@192.168.31.214:/opt/
 scp /opt/kubernetes/ssl/ca.pem root@192.168.31.214:/opt/kubernetes/ssl
 ```
 
-（8） 删除 kubelet 证书和 kubeconfig 文件
+（9） 删除 kubelet 证书和 kubeconfig 文件
 
 ```
 rm -rf /opt/kubernetes/cfg/kubelet.kubeconfig
@@ -1059,7 +1059,7 @@ hostnameOverride:node01 #修改为对应的主机名
 
 ```
 
-（9） 启动并设置开机启动
+（10） 启动并设置开机启动
 
 ```
 systemctl daemon-reload
@@ -1069,7 +1069,7 @@ systemctl start kube-proxy
 systemctl status kube-proxy
 ```
 
- （10） 在 Master 上批准新 Node kubelet 证书申请
+ （11） 在 Master 上批准新 Node kubelet 证书申请
 
 ```
 kubectl get csr
@@ -1083,7 +1083,7 @@ kubectl certificate approve node-csr-s7PYu_ZCaDocKvq4mWLaawvswObcEQPo4ON6KhkOrwo
 
 ```
 
- （11） 查看 Node 状态
+(12） 查看 Node 状态
 
 ```
 kubectl get node
@@ -1094,7 +1094,7 @@ node02   Ready    <none>   21s     v1.18.3
 
 ```
 
-(12） 验证
+(13） 验证
 
 ```
 kubectl create deployment nginx --image=nginx
