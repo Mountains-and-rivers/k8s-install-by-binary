@@ -537,6 +537,7 @@ cp -rf ~/TLS/k8s/ca*pem ~/TLS/k8s/server*pem /opt/kubernetes/ssl/
 ```
 
 （6） 启用 TLS Bootstrapping 机制
+![image](https://github.com/Mountains-and-rivers/k8s-install-by-binary/blob/main/image/TLS%20bootstraping%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B.jpg)
 
 ```
  TLS Bootstraping：Master apiserver 启用 TLS 认证后，Node 节点 kubelet 和 kube-
@@ -1108,6 +1109,7 @@ NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)        AGE
 service/kubernetes   ClusterIP   10.0.0.1     <none>        443/TCP        65m
 service/nginx        NodePort    10.0.0.50    <none>        80:31091/TCP   21s
 ```
+![image](https://github.com/Mountains-and-rivers/k8s-install-by-binary/blob/main/image/%E8%AE%BF%E9%97%AE%E9%AA%8C%E8%AF%81.png)
 
 
 
