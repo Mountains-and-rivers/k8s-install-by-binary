@@ -1047,7 +1047,7 @@ scp -r /opt/cni/ root@192.168.31.214:/opt/
 scp /opt/kubernetes/ssl/ca.pem root@192.168.31.214:/opt/kubernetes/ssl
 ```
 
-（9） 删除 kubelet 证书和 kubeconfig 文件
+（9） 删除 kubelet 证书和 kubeconfig 文件重新生成
 
 ```
 rm -rf /opt/kubernetes/cfg/kubelet.kubeconfig
