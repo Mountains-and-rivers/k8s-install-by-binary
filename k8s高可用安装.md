@@ -1266,4 +1266,9 @@ systemctl enable haproxy
 systemctl start haproxy
 systemctl status haproxy
 ```
+(6) 验证
+
+```
+curl -k https://192.168.31.158:8443/version
+```
 
