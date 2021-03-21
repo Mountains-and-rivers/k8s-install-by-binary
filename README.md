@@ -1094,8 +1094,16 @@ node01   Ready    <none>   11s     v1.18.3
 node02   Ready    <none>   21s     v1.18.3
 
 ```
+(13） 查看 etcd中的pods数据
 
-(13） 验证
+```
+ETCDCTL_API=3 /opt/etcd/bin/etcdctl --cacert=/opt/etcd/ssl/ca.pem --cert=/opt/etcd/ssl/server.pem --key=/opt/etcd/ssl/server-key.pem --endpoints="https://192.168.31.240:2379,https://192.168.31.209:2379,https://192.168.31.214:2379" get / --prefix --keys-only
+
+ETCDCTL_API=3 /opt/etcd/bin/etcdctl --cacert=/opt/etcd/ssl/ca.pem --cert=/opt/etcd/ssl/server.pem --key=/opt/etcd/ssl/server-key.pem --endpoints="https://192.168.31.240:2379,https://192.168.31.209:2379,https://192.168.31.214:2379" get /registry/services/specs/default/nginx --prefix
+
+```
+
+(14） 验证
 
 ```
 kubectl create deployment nginx --image=nginx
