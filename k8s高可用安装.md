@@ -1025,14 +1025,29 @@ etcd-2               Healthy   {"health":"true"}
 --clusterrole=system:node-bootstrapper \
 --user=kubelet-bootstrap
 ```
-
- （2） 授权 apiserver 访问 kubelet
+（2） 部署 CNI 网络
+```
+kubectl apply -f kube-flannel.yml
+kubectl get pods -n kube-system
+kubectl get node
+```
+（3） 删除 kubelet 证书和 kubeconfig 文件重新生成
+```
+rm -rf /opt/kubernetes/cfg/kubelet.kubeconfig
+rm -rf /opt/kubernetes/ssl/kubelet*
+# 修改主机名
+vi /opt/kubernetes/cfg/kubelet.conf
+--hostname-override=node01 #修改为对应的主机名
+vi /opt/kubernetes/cfg/kube-proxy-config.yml
+hostnameOverride:node01 #修改为对应的主机名
+```
+（4） 授权 apiserver 访问 kubelet
 
 ```
 kubectl apply -f apiserver-to-kubelet-rbac.yaml
 ```
 
-(3） 在 Master 上批准新 Node kubelet 证书申请
+(5） 在 Master 上批准新 Node kubelet 证书申请
 
 ```
 kubectl get csr
@@ -1048,7 +1063,7 @@ kubectl certificate approve node-csr-s7PYu_ZCaDocKvq4mWLaawvswObcEQPo4ON6KhkOrwo
 如果kubectl get node 看不到node，把master01的配置删除，重新批准证书申请
 ```
 
-(4） 查看 Node 状态
+(6） 查看 Node 状态
 
 ```
 kubectl get node
