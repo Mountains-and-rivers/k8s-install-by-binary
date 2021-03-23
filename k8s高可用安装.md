@@ -1286,4 +1286,16 @@ systemctl status haproxy
 ```
 curl -k https://192.168.31.158:8443/version
 ```
+# 集群访问测试
+(1) 访问集群
+```
 
+# 获取与之交互的集群名称
+export CLUSTER_NAME=$(kubectl config view -o jsonpath='{"Cluster name\tServer\n"}{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}' --kubeconfig=bootstrap.kubeconfig | grep kubernetes| awk -F' ' '{print $1}')
+# 获取TOKEN
+TOKEN=$(kubectl get secrets -o jsonpath="{.items[?(@.metadata.annotations['kubernetes\.io/service-account\.name']=='default')].data.token}"|base64 -d)
+# 获取集群地址
+APISERVER=$(kubectl config view -o jsonpath='{"Cluster name\tServer\n"}{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}' --kubeconfig=bootstrap.kubeconfig | grep kubernetes| awk -F' ' '{print $2}')
+# 使用令牌访问API
+curl -X GET $APISERVER/api --header "Authorization: Bearer $TOKEN" --insecure
+```
