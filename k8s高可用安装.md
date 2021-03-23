@@ -1298,4 +1298,18 @@ TOKEN=$(kubectl get secrets -o jsonpath="{.items[?(@.metadata.annotations['kuber
 APISERVER=$(kubectl config view -o jsonpath='{"Cluster name\tServer\n"}{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}' --kubeconfig=bootstrap.kubeconfig | grep kubernetes| awk -F' ' '{print $2}')
 # 使用令牌访问API
 curl -X GET $APISERVER/api --header "Authorization: Bearer $TOKEN" --insecure
+
+{
+  "kind": "APIVersions",
+  "versions": [
+    "v1"
+  ],
+  "serverAddressByClientCIDRs": [
+    {
+      "clientCIDR": "0.0.0.0/0",
+      "serverAddress": "192.168.31.209:6443"
+    }
+  ]
+}
+
 ```
